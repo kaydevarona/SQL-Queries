@@ -1,0 +1,32 @@
+/* business question: what percentage of the orders is fullfilled by each warehouse? */
+
+SELECT 
+    w.warehouse_id,
+    CONCAT(w.state,  ': ', w.warehouse_alias) AS warehouse_name,
+    COUNT(o.order_id) AS num_of_orders,
+    --need to put a subquery to pull the total number of orders placed across all warehouses
+    (
+        SELECT 
+            COUNT (*) --indicate total
+        FROM 
+            warehouse_orders.orders o
+    ) AS total_orders,
+
+    CASE --to create categories for our warehouses based on how many orders they will fulfill. 
+        WHEN COUNT(o.order_id)/(SELECT COUNT(*) FROM warehouse_orders.orders o) <= 0.20 --to get the percentage
+        THEN "fullfilled 0-20% of orders"
+        WHEN COUNT(o.order_id)/(SELECT COUNT(*) FROM warehouse_orders.orders o) > 0.20 
+        AND COUNT(o.order_id)/(SELECT COUNT(*) FROM warehouse_orders.orders o) <= 0.60
+        THEN "fullfilled 0-60% of orders"
+    ELSE "fullfilled more than 60% of orders"
+    END AS fulfillment_summary
+FROM 
+    `true-pipe-325200.warehouse_orders.warehouse` w
+LEFT JOIN 
+    warehouse_orders.orders o 
+    ON w.warehouse_id = o.warehouse_id
+GROUP BY 
+    w.warehouse_id,
+    warehouse_name
+HAVING --use HAVING to only include warehouses that have at least one order
+    COUNT(o.order_id) > 0
